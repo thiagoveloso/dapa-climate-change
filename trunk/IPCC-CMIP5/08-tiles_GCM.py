@@ -9,10 +9,10 @@ import arcpy, os, sys, string, glob, shutil
 from arcpy import env
 
 #Syntax
-if len(sys.argv) < 7:
+if len(sys.argv) < 8:
 	os.system('cls')
 	print "\n Too few args"
-	print "   - ie: python 08-tiles_GCM.py T:\gcm\cmip5\downscaled D:\jetarapues\cmip5_process\cmip5_tiles_process T:\gcm\cmip5\ipcc_5ar_ciat_tiled rcp45 30s r1i1p1 ALL"
+	print "   - ie: python 08-tiles_GCM.py T:\gcm\cmip5\downscaled D:\jetarapues\cmip5_process\cmip5_tiles_process T:\gcm\cmip5\ipcc_5ar_ciat_tiled rcp85 30s r1i1p1 bio ipsl_cm5a_mr"
 	sys.exit(1)
 
 dirBase = sys.argv[1]
@@ -22,6 +22,7 @@ rcp = sys.argv[4]
 res = sys.argv[5]
 ens = sys.argv[6]
 varlist = sys.argv[7]
+modelF = sys.argv[8]
 
 os.system('cls')
 
@@ -29,12 +30,17 @@ print "\t/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\ "
 print "\t/\/\/\/\/SPLIT IN TILES CMIP5/\/\/\/ "
 print "\t/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\ \n"
 
-modellist = sorted(os.listdir(dirBase + "\\" + rcp + "\\global_" + str(res)))
+
+if modelF == "ALL":
+	modellist = sorted(os.listdir(dirBase + "\\" + rcp + "\\global_" + str(res)))
+else:
+	modellist = modelF.split(",")
+
 
 if varlist == "ALL":
 	variablelist = ["bio","cons_mths","prec","tmin","tmax","tmean" ]
 else:
-	variablelist = variable.split(",")
+	variablelist = varlist.split(",")
 
 
 rcpDc = {"rcp26": "rcp2_6", "rcp45": "rcp4_5", "rcp60": "rcp6_0", "rcp85": "rcp8_5"}
@@ -65,23 +71,23 @@ for model in sorted(modellist):
 			print "\n\tprocessing", model,period + "\n"
 			
 			########## ckeck if raster exist!
-			# arcpy.env.workspace = dirgrids
-			# for variable in variablelist:
-				# if variable == "bio":
-					# num = 19
-				# else:
-					# num = 12
-				# for month in range (1, num + 1, 1):
-					# for i in range(1,18):
-						# if variable == "cons_mths":
-							# raster = arcpy.env.workspace + "\\" + variable + "_" + str(i)
-						# else:
-							# raster = arcpy.env.workspace + "\\" + variable + "_" + str(month) + "_" + str(i)
-						# if not arcpy.Exists(raster):
-							# print "no existe", os.path.basename(raster), model, period
-							# raster = dirBase + "\\" + rcp + "\\global_" + str(res) + "\\" + model + "\\" + ens + "\\" + period + "\\" + os.path.basename(raster).split("_")[0]+"_"+os.path.basename(raster).split("_")[1]
-							# arcpy.SplitRaster_management(raster, dirgrids, raster + "_", "NUMBER_OF_TILES",  "GRID", "#", "6 3", "#", "0", "DEGREES", "#", "#")
-							# print "\t", os.path.basename(raster)+"_"+str(i), "fix splited" 							
+			arcpy.env.workspace = dirgrids
+			for variable in variablelist:
+				if variable == "bio":
+					num = 19
+				else:
+					num = 12
+				for month in range (1, num + 1, 1):
+					for i in range(1,18):
+						if variable == "cons_mths":
+							raster = arcpy.env.workspace + "\\" + variable + "_" + str(i)
+						else:
+							raster = arcpy.env.workspace + "\\" + variable + "_" + str(month) + "_" + str(i)
+						if not arcpy.Exists(raster):
+							print "no existe", os.path.basename(raster), model, period
+							raster = dirBase + "\\" + rcp + "\\global_" + str(res) + "\\" + model + "\\" + ens + "\\" + period + "\\" + os.path.basename(raster).split("_")[0]+"_"+os.path.basename(raster).split("_")[1]
+							arcpy.SplitRaster_management(raster, dirgrids, raster + "_", "NUMBER_OF_TILES",  "GRID", "#", "6 3", "#", "0", "DEGREES", "#", "#")
+							print "\t", os.path.basename(raster)+"_"+str(i), "fix splited" 							
 				
 
 			########### ckeck if raster exist!
@@ -94,7 +100,7 @@ for model in sorted(modellist):
 			# rasterList = sorted(arcpy.ListRasters("", "GRID"))
 			# for raster in rasterList:
 				# try:
-					######### arcpy.CalculateStatistics_management(raster)
+					####### arcpy.CalculateStatistics_management(raster)
 					# arcpy.GetRasterProperties_management(raster, "MINIMUM")
 				# except:
 					# print "DELETE FILE  ", raster
@@ -121,8 +127,8 @@ for model in sorted(modellist):
 					print "\t ", os.path.basename(raster), " splited"# + "_"+str(i)
 				else:
 					print "\t ", os.path.basename(raster), " splited"
-			####### Convert to Asciis
-			# print "\n .> Convert to Asciis: ", rcp, model, str(res), ens, period, "\n"
+			###### Convert to Asciis
+			print "\n .> Convert to Asciis: ", rcp, model, str(res), ens, period, "\n"
 			
 			#########Get a list of raster in processing dir
 			arcpy.env.workspace = dirgrids		
