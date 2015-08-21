@@ -24,8 +24,8 @@ library(sp); library(raster); library(rgdal); library(maptools); library(ncdf)
 dirbase="U:/cropdata/"
 dataset <- "agmerra"
 
-wd <-  "D:/TEMP/test"#paste0(dirbase,dataset,"/daily/nc-files/_primary_files")
-oDir <- "D:/TEMP/test"#paste0(dirbase,dataset,"/daily/nc-files")
+wd <-  paste0(dirbase,dataset,"/daily/nc-files/_primary_files")
+oDir <- paste0(dirbase,dataset,"/daily/nc-files")
 
 
 ncList <- list.files(wd,full.names = FALSE)
@@ -37,152 +37,68 @@ year=sapply(strsplit(ncList, '[_]'), "[[", 2)
 yearMin=min(as.numeric(year))
 yearMax=max(as.numeric(year))
 
-ncListVar <- list.files(wd, pattern=paste0(varraw[1],".*"),full.names = FALSE)
+txtFile = paste(dirbase,"/","summary_obs.txt",sep="")
+if(file.exists(txtFile)){
+}else{
+  opnFile <- file(txtFile, open="a")
+  cat("id	name\tobsset_id\tvariable_id\tlocal_url\n", file=opnFile)
+}
 
-setwd(wd)
+local_url=paste0("/cropdata/",dataset,"/daily/nc-files/")
 
-system(paste("cdo -s -f nc mergetime ", paste(ncListVar[1:2], collapse=" "), " ", oDir, "/", varmod,"_daily_ts_",dataset,"_",yearMin,"_",yearMax,".nc", sep=""))
+if (dataset=="agmerra"){
+  bsset_id=3
+}else if (dataset=="grasp"){
+  bsset_id=4
+}else if (dataset=="agcfsr"){
+  bsset_id=5
+}else if (dataset=="princeton"){
+  bsset_id=6
+}else if (dataset=="ispam"){
+  bsset_id=7
+}else if (dataset=="nnrp"){
+  bsset_id=8
+}
+i=0
 
-
-raster("U:/cropdata/grasp/daily/1.125degree/precsfc/precsfc1961.grd")
-
-
-
-
-#function to process all years and months of a variable and dataset
-process_wfd_wth <- function(dataset,vname) {
+cat(dataset,"\n")
+for (var in varraw){
   
-  cat("\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n")
-  cat("\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n")
-  cat("\n...processing",dataset,"and",vname,"\n")
-  
-  bvname <- vname
-  if (vname == "Rainf") {suffix <- paste("_daily_",dataset,"_GPCC",sep="")} else {suffix <- paste("_daily_",dataset,sep="")}
-  if (dataset == "WFDEI") {if (vname == "Tmax" | vname == "Tmin") {bvname <- "Tair"}}
-  
-  if (vname == "Rainf") {
-    vunits <- "kg m-2 s-1"
+  if (var == "prate") {
     varmod <- "prec"
-  } else if (vname == "SWdown") {
-    vunits <- "W m-2"
+    variable_id=1
+  } else if (var == "srad") {
     varmod <- "srad"
-  } else {
-    vunits <- "K"
-    varmod <- tolower(vname)
-  }
+    variable_id=5
+  } else if (var == "rhstmax") {
+    varmod <- "rhstmax"
+    variable_id=10
+  } else if (var == "tavg") {
+    varmod <- "tavg"
+    variable_id=3
+  } else if (var == "tmax") {
+    varmod <- "tmax"
+    variable_id=2
+  } else if (var == "tmin") {
+    varmod <- "tmin"
+    variable_id=4
+  } else if (var == "wndspd") {
+    varmod <- "wndspd"
+    variable_id=9
+  }  
   
-  idataDir <- paste(wd,"/",vname,suffix,sep="")
-  odataDir <- paste(oDir,"/",vname,suffix,sep="")
-  if (!file.exists(odataDir)) {dir.create(odataDir, recursive=T)}
+  ncListVar <- list.files(wd, pattern=paste0(var,".*"),full.names = FALSE)
   
-  years <- get(paste(tolower(dataset),"_yrs",sep=""))
+  setwd(wd)
   
+  system(paste("cdo -s -f nc mergetime ", paste(ncListVar[1:2], collapse=" "), " ", oDir, "/", var,"_daily_ts_",dataset,"_",yearMin,"_",yearMax,"-temp.nc", sep=""))
+  system(paste("nccopy -d9 ", oDir, "/", var,"_daily_ts_",dataset,"_",yearMin,"_",yearMax,"-temp.nc", " ", oDir, "/", var,"_daily_ts_",dataset,"_",yearMin,"_",yearMax,".nc", sep=""))
+  unlink(paste(oDir, "/", var,"_daily_ts_",dataset,"_",yearMin,"_",yearMax,"-temp.nc", sep=""))
   
-  ts <- paste0(varmod, "_daily_ts_", years[1], "_", years[length(years)], ".nc", sep="")
-  if (!file.exists(paste(odataDir,"/", ts))) {
-    
-    #loop years and months
-    for (yr in years) {
-      
-      for (mth in 1:12) {
-        
-        mthMod <- paste((mthMat$MthMod[which(mthMat$Mth == mth)]))
-        
-        cat("...processing year=",yr,"and month=",mth,"\n")
-        tmth <- sprintf("%1$02d",mth)
-        
-        fname <- paste(vname,suffix,"_",yr,tmth,".nc",sep="")
-        
-        if (!file.exists(paste(odataDir,"/",fname,sep=""))) {
-          #read netcdf using ncdf package
-          setwd(idataDir)
-          nc <- open.ncdf(fname)
-          ncdata <- get.var.ncdf(nc,nc$var[[bvname]]) #get data from nc connection
-          brs <- raster(nrow=360,ncol=720,xmn=-180,xmx=180,ymn=-90,ymx=90) #base raster
-          if (dataset == "WFDEI") {nt <- dim(ncdata)[3]} else {nt <- ncol(ncdata)}
-          
-          #create stack
-          stk <- c()
-          for (i in 1:nt) {
-            
-            rs <- brs
-            if (dataset == "WFD") {
-              rs[as.numeric(nc$var[[bvname]]$dim[[1]]$vals)] <- ncdata[,i]
-              #             stk <- c(stk,rotate(rs))
-              stk <- c(stk,rs)
-            } else {
-              tdata <- t(ncdata[,,i]); tdata[which(tdata[] == 1.e20)] <- NA
-              rs[] <- t(ncdata[,,i]) #tdata
-              rs[which(rs[] >= 1.e20)] <- NA
-              # stk <- c(stk,rotate(flip(rs,direction="y")))
-              stk <- c(stk, flip(rs, direction="y"))
-            }
-          }
-          
-          nc <- close.ncdf(nc)
-          
-          #dimension definitions
-          dimX <- dim.def.ncdf("lon","degrees_east",seq(-179.75,179.75,by=0.5))
-          dimY <- dim.def.ncdf("lat","degrees_north",seq(-89.75,89.75,by=0.5))
-          dimT <- dim.def.ncdf( "time", "days", 1:nt, unlim=FALSE)
-          
-          #create variable definitions
-          mv <- 1.e20
-          var3d <- var.def.ncdf(vname,vunits,list(dimX,dimY,dimT),mv,prec="single")
-          
-          #create file
-          nc <- create.ncdf(paste(odataDir,"/",vname,"_rewritten.nc",sep=""), list(var3d))
-          for (i in 1:nt) {
-            data2d <- flip(stk[i][[1]],"y")[]
-            put.var.ncdf(nc, var3d, data2d, start=c(1,1,i), c(-1,-1,1))
-          }
-          nc <- close(nc)
-          
-          setwd(odataDir)
-          system(paste("cdo -s -settaxis,", yr, "-", tmth, "-01,00:00:00,1day ", vname,"_rewritten.nc ", fname, sep=""))
-          
-          #garbage collection
-          file.remove(paste0(vname,"_rewritten.nc"))
-          #           system(paste("rm -f ",vname,"_rewritten.nc",sep=""))
-          setwd(wd)
-          
-          
-        } else {
-          cat("...processed year=",yr,"and month=",mth,"\n")
-        }
-        
-      }
-      
-    }
-    
-    ncList <- list.files(odataDir, pattern=paste0(vname,suffix, "_*"),full.names = FALSE)
-    
-    setwd(odataDir)
-    
-    cat(paste0("\nMerging ", vname, suffix, "\n"))
-    system(paste("cdo -s mergetime ", paste(ncList, collapse=" "), " ", odataDir, "/", ts, sep=""))
-    
-    ## Remove intial files
-    #     for (nc in ncList){system(paste("rm -f ", odataDir, "/", nc, sep=""))}
-    
-    cat(paste0("\nMerging ", vname, suffix, " done\n"))
-    
-    
-  } else {
-    
-    cat(paste0("\nMerging ", vname, suffix, " done\n"))
-    
-  }
+  cat(paste(i+1, "\t", var,"_daily_ts_",dataset,"_",yearMin,"_",yearMax,".nc", "\t",bsset_id, "\t", variable_id, "\t", local_url,"\n", sep=""), file=opnFile)
+  
+  cat(" ",paste0(var,"_daily_ts_",dataset,"_",yearMin,"_",yearMax," ..done\n"))
   
 }
-
-
-# 
-# #loop through datasets and variables
-#for (dataset in dst_list) {
-dataset <- dst_list[2]
-
-for (vname in var_list) { 
-  process_wfd_wth(dataset,vname)
-}
-#}
+close.connection(opnFile) 
+cat("DONE!")
