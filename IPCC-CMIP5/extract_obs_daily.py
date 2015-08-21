@@ -8,7 +8,7 @@
 import os, sys, string,glob, shutil
 
 # C:\\Python27\\ArcGIS10.1\\python.exe D:\jetarapues\_scripts\01_check_data_daily_cmip5.py D:\jetarapues\TEMP\extract 2011 2015 100000,85000 -72.301412,5.339301 T:\gcm\cmip5\raw\daily\rcp60\gfdl_esm2g\r1i1p1\original-data\hur_day_GFDL-ESM2G_rcp60_r1i1p1_20110101-20151231.nc D:/jetarapues/cdo/cdo.exe
-# python D:\jetarapues\_scripts\extract_obs_daily.py D:\jetarapues\TEMP\extract 2008 2010 100000,85000 -72.301412,5.339301 U:\cropdata\agmerra\daily\nc-files\prec_daily_ts_agmerra_1980_2010_d9.nc4 D:/jetarapues/cdo/cdo.exe
+# python D:\_scripts\dapa-climate-change\IPCC-CMIP5\extract_obs_daily.py D:\jetarapues\TEMP\extract 2008 2010 100000,85000 -72.301412,5.339301 U:\cropdata\agmerra\daily\nc-files\prec_daily_ts_agmerra_1980_2010_d9.nc4 cdo
 
 
 #Syntax
@@ -44,7 +44,7 @@ if not os.path.exists(dirout):
 
 
 name=os.path.basename(file)
-var=name.split("_")[0]
+var="NA"#name.split("_")[0]
 time=name.split("_")[1]
 obs=name.split("_")[3]
 yearI=name.split("_")[4]
