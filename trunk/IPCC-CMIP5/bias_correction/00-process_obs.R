@@ -24,9 +24,8 @@ library(sp); library(raster); library(rgdal); library(maptools); library(ncdf)
 dirbase="U:/cropdata/"
 dataset <- "agmerra"
 
-wd <-  paste0(dirbase,dataset,"/daily/nc-files/_primary_files")
 oDir <- paste0(dirbase,dataset,"/daily/nc-files")
-
+wd <-  paste0(dirbase,dataset,oDir,"/_primary_files")
 
 ncList <- list.files(wd,full.names = FALSE)
 varraw=sapply(strsplit(ncList, '[_]'), "[[", 3)
@@ -61,8 +60,9 @@ if (dataset=="agmerra"){
 }
 i=0
 
-cat(dataset,"\n")
+
 for (var in varraw){
+  cat("processing..",dataset,var,"\n")
   
   if (var == "prate") {
     varmod <- "prec"
